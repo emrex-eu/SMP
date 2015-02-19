@@ -1,0 +1,2 @@
+# SMP
+Student mobility plugin
