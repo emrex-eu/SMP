@@ -12,7 +12,7 @@
 		<jetty.version>9.2.8.v20150217</jetty.version>
 		<gson.version>2.3.1</gson.version>
 		<slf4j.version>1.7.10</slf4j.version>
-		<bouncycastle.version>1.51</bouncycastle.version>
+		<bouncycastle.version>1.46</bouncycastle.version>
 	</properties>
 
 	<dependencies>
@@ -44,6 +44,12 @@
 			<groupId>org.eclipse.jetty</groupId>
 			<artifactId>jetty-server</artifactId>
 			<version>${jetty.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.bouncycastle</groupId>
+			<artifactId>bcprov-jdk16</artifactId>
+			<version>${bouncycastle.version}</version>
 		</dependency>
 
 	</dependencies>
