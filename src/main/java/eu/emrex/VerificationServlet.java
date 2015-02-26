@@ -47,7 +47,7 @@ public class VerificationServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException,
             IOException {
 
-        VerificationRequest v = Util.getJsonObjectFromRequest(request);
+        VerificationRequest v = Util.getJsonObjectFromRequest(request, VerificationRequest.class);
         Person elmoP = getPersonFromElmo(v.getData());
         Person vreqP = getPersonFromVerificationRequest(v);
 

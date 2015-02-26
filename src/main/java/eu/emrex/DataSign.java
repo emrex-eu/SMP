@@ -1,12 +1,10 @@
 package eu.emrex;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
@@ -49,10 +47,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.reflect.TypeToken;
-
 import eu.emrex.model.DataResponse;
 
 @WebServlet(name = "DataSign", urlPatterns = { "/data/sign" })
@@ -66,21 +60,7 @@ public class DataSign extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException,
             IOException {
         try {
-            // DataResponse dataResp = Util.getJsonObjectFromRequest(request);
-
-            StringBuffer jb = new StringBuffer();
-            String line = null;
-
-            BufferedReader reader = request.getReader();
-            while ((line = reader.readLine()) != null)
-                jb.append(line);
-
-            String inputReq = jb.toString();
-
-            Gson gson = new GsonBuilder().create();
-            Type type = new TypeToken<DataResponse>() {
-            }.getType();
-            DataResponse dataResp = gson.fromJson(inputReq, type);
+            DataResponse dataResp = Util.getJsonObjectFromRequest(request, DataResponse.class);
 
             String signedElmo = sign(dataResp.getCertificate(), dataResp.getEncKey(), dataResp.getData());
 
