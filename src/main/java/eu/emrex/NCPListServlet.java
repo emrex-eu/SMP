@@ -12,7 +12,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@WebServlet(name = "NCPList", urlPatterns = { "/ncplist" })
+@WebServlet(name = "NCPList", urlPatterns = { "/emreg/list" })
 public class NCPListServlet extends HttpServlet {
 
     private static final long serialVersionUID = 1L;
@@ -24,10 +24,10 @@ public class NCPListServlet extends HttpServlet {
         HttpURLConnection conn = null;
         String json = null;
         try {
-            conn = ConnectionUtil.setupConnection(System.getProperty("emrex.emreg_url"), "GET");
+            conn = Util.setupConnection(System.getProperty("emrex.emreg_url"), "GET");
             response.setStatus(conn.getResponseCode());
             if (conn.getResponseCode() == HttpURLConnection.HTTP_OK) {
-                json = ConnectionUtil.getJson(conn);
+                json = Util.getDataFromConnection(conn);
                 response.setContentType("text/html");
                 response.getWriter().println(json);
             }
