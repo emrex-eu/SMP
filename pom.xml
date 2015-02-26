@@ -12,6 +12,7 @@
 		<jetty.version>9.2.8.v20150217</jetty.version>
 		<gson.version>2.3.1</gson.version>
 		<slf4j.version>1.7.10</slf4j.version>
+		<bouncycastle.version>1.51</bouncycastle.version>
 	</properties>
 
 	<dependencies>
@@ -44,6 +45,7 @@
 			<artifactId>jetty-server</artifactId>
 			<version>${jetty.version}</version>
 		</dependency>
+
 	</dependencies>
 
 	<!-- Set up so that the project can be run with mvn jetty:run -->
