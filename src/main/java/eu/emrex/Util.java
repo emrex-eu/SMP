@@ -4,7 +4,6 @@ import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.ProtocolException;
@@ -16,7 +15,6 @@ import javax.servlet.http.HttpServletRequest;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.reflect.TypeToken;
 
 public class Util {
 
@@ -50,7 +48,7 @@ public class Util {
     }
 
 
-    public static <T> T getJsonObjectFromRequest(HttpServletRequest request) throws IOException {
+    public static <T> T getJsonObjectFromRequest(HttpServletRequest request, Class<T> t) throws IOException {
         StringBuffer jb = new StringBuffer();
         String line = null;
 
@@ -61,9 +59,7 @@ public class Util {
         String inputReq = jb.toString();
 
         Gson gson = new GsonBuilder().create();
-        Type type = new TypeToken<T>() {
-        }.getType();
-        return gson.fromJson(inputReq, type);
+        return gson.fromJson(inputReq, t);
     }
 
 
