@@ -11,7 +11,7 @@ import java.security.PublicKey;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPrivateKey;
-import java.security.spec.RSAPrivateKeySpec;
+import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -43,8 +43,6 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
-import org.bouncycastle.asn1.ASN1Sequence;
-import org.bouncycastle.asn1.pkcs.RSAPrivateKeyStructure;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -115,11 +113,14 @@ public class DataSign extends HttpServlet {
         byte[] encoded = Base64Coder.decodeLines(encKey);
         logger.info("Extracted key, length " + encoded.length);
 
+        /*
         RSAPrivateKeyStructure asn1PrivKey = new RSAPrivateKeyStructure(
                                                                         (ASN1Sequence) ASN1Sequence
                                                                             .fromByteArray(encoded));
         RSAPrivateKeySpec rsaPrivKeySpec = new RSAPrivateKeySpec(asn1PrivKey.getModulus(),
                                                                  asn1PrivKey.getPrivateExponent());
+                                                                 */
+        PKCS8EncodedKeySpec rsaPrivKeySpec = new PKCS8EncodedKeySpec(encoded);
         KeyFactory kf = KeyFactory.getInstance("RSA");
         RSAPrivateKey pk = (RSAPrivateKey) kf.generatePrivate(rsaPrivKeySpec);
 
