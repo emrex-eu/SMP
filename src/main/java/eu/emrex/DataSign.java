@@ -5,15 +5,16 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
+import java.security.PublicKey;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.spec.RSAPrivateKeySpec;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 
 import javax.servlet.ServletException;
@@ -30,6 +31,7 @@ import javax.xml.crypto.dsig.Transform;
 import javax.xml.crypto.dsig.XMLSignature;
 import javax.xml.crypto.dsig.XMLSignatureFactory;
 import javax.xml.crypto.dsig.dom.DOMSignContext;
+import javax.xml.crypto.dsig.dom.DOMValidateContext;
 import javax.xml.crypto.dsig.keyinfo.KeyInfo;
 import javax.xml.crypto.dsig.keyinfo.KeyInfoFactory;
 import javax.xml.crypto.dsig.keyinfo.X509Data;
@@ -46,6 +48,7 @@ import org.bouncycastle.asn1.pkcs.RSAPrivateKeyStructure;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
 
 import eu.emrex.model.DataResponse;
 
@@ -64,7 +67,9 @@ public class DataSign extends HttpServlet {
 
             String signedElmo = sign(dataResp.getCertificate(), dataResp.getEncKey(), dataResp.getData());
 
-            logger.info("doPost(): " + signedElmo);
+            logger.info("sign(): " + signedElmo);
+
+            logger.info("verifySignature(): " + verifySignature(dataResp.getCertificate(), signedElmo));
 
         } catch (Exception t) {
             logger.error("Request encryption failed", t);
@@ -84,27 +89,25 @@ public class DataSign extends HttpServlet {
 
 
     private String sign(String certificate, String encKey, String data) throws Exception {
-        // Create a DOM XMLSignatureFactory that will be used to
-        // generate the enveloped signature.
+        // Create a DOM XMLSignatureFactory that will be used to generate the enveloped signature.
         XMLSignatureFactory fac = XMLSignatureFactory.getInstance("DOM");
 
-        // Create a Reference to the enveloped document (in this case,
-        // you are signing the whole document, so a URI of "" signifies
-        // that, and also specify the SHA1 digest algorithm and
-        // the ENVELOPED Transform.
+        // Create a Reference to the enveloped document (in this case, you are signing the whole
+        // document, so a URI of "" signifies that, and also specify the SHA1 digest algorithm
+        // and the ENVELOPED Transform.
         Reference ref = fac.newReference("", fac.newDigestMethod(DigestMethod.SHA1, null),
             Collections.singletonList(
                 fac.newTransform(Transform.ENVELOPED, (TransformParameterSpec) null)), null, null);
 
         // Create the SignedInfo.
         SignedInfo si = fac.newSignedInfo(fac.newCanonicalizationMethod
-            (CanonicalizationMethod.INCLUSIVE,
-                (C14NMethodParameterSpec) null),
+            (CanonicalizationMethod.INCLUSIVE, (C14NMethodParameterSpec) null),
             fac.newSignatureMethod(SignatureMethod.RSA_SHA1, null), Collections.singletonList(ref));
 
         // Instantiate the document to be signed.
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-        InputStream is = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
+        dbf.setNamespaceAware(true);
+        InputStream is = new ByteArrayInputStream(data.getBytes()); // StandardCharsets.ISO_8859_1
         Document doc = dbf.newDocumentBuilder().parse(is);
 
         // Extract the private key from string
@@ -119,12 +122,6 @@ public class DataSign extends HttpServlet {
                                                                  asn1PrivKey.getPrivateExponent());
         KeyFactory kf = KeyFactory.getInstance("RSA");
         RSAPrivateKey pk = (RSAPrivateKey) kf.generatePrivate(rsaPrivKeySpec);
-
-        /*
-        PKCS8EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(encoded);
-        KeyFactory kf = KeyFactory.getInstance("RSA");
-        PrivateKey pk = kf.generatePrivate(privateKeySpec);
-        */
 
         // Create a DOMSignContext and specify the RSA PrivateKey and
         // location of the resulting XMLSignature's parent element.
@@ -148,5 +145,50 @@ public class DataSign extends HttpServlet {
         Transformer trans = tf.newTransformer();
         trans.transform(new DOMSource(doc), new StreamResult(os));
         return os.toString();
+    }
+
+
+    public boolean verifySignature(String certificate, String data) throws Exception {
+        // Create a DOM XMLSignatureFactory that will be used to generate the enveloped signature.
+        XMLSignatureFactory fac = XMLSignatureFactory.getInstance("DOM");
+
+        // Instantiate the document to be signed.
+        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+        dbf.setNamespaceAware(true);
+        InputStream is = new ByteArrayInputStream(data.getBytes()); // StandardCharsets.ISO_8859_1
+        Document doc = dbf.newDocumentBuilder().parse(is);
+
+        // Find Signature element.
+        NodeList nl = doc.getElementsByTagNameNS(XMLSignature.XMLNS, "Signature");
+        if (nl.getLength() == 0) {
+            throw new Exception("Cannot find Signature element");
+        }
+
+        X509Certificate cert = getCertificate(certificate);
+        PublicKey pubKey = cert.getPublicKey();
+        DOMValidateContext valContext = new DOMValidateContext(pubKey, nl.item(0));
+
+        // Unmarshal the XMLSignature.
+        XMLSignature signature = fac.unmarshalXMLSignature(valContext);
+
+        // Validate the XMLSignature.
+        boolean coreValidity = signature.validate(valContext);
+
+        // Check core validation status.
+        if (coreValidity == false) {
+            logger.error("Signature failed core validation");
+            boolean sv = signature.getSignatureValue().validate(valContext);
+            logger.error("signature validation status: " + sv);
+            if (sv == false) {
+                // Check the validation status of each Reference.
+                Iterator i = signature.getSignedInfo().getReferences().iterator();
+                for (int j = 0; i.hasNext(); j++) {
+                    boolean refValid = ((Reference) i.next()).validate(valContext);
+                    System.out.println("ref[" + j + "] validity status: " + refValid);
+                }
+            }
+        }
+
+        return coreValidity;
     }
 }
