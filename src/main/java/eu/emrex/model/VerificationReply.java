@@ -1,5 +1,8 @@
 package eu.emrex.model;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class VerificationReply {
 
     private String SessionId;
@@ -8,6 +11,11 @@ public class VerificationReply {
 
     private String data;
 
+    private final List<String> messages;
+    
+    public VerificationReply() {
+    	messages = new ArrayList<String>();
+    }
 
     public String getSessionId() {
         return SessionId;
@@ -36,6 +44,14 @@ public class VerificationReply {
 
     public void setData(String data) {
         this.data = data;
+    }
+
+	public List<String> getMessages() {
+		return messages;
+	}
+    
+    public void addMessage(String msg) {
+    	messages.add(msg);
     }
 
 }
