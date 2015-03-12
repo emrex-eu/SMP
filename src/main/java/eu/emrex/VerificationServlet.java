@@ -20,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -51,10 +52,9 @@ public class VerificationServlet extends HttpServlet {
         Person elmoP = getPersonFromElmo(v.getData());
         Person vreqP = getPersonFromVerificationRequest(v);
 
-        int matchingScore = matchPersons(elmoP, vreqP);
         VerificationReply r = new VerificationReply();
+        matchPersons(r, elmoP, vreqP);
         r.setSessionId(v.getSessionId());
-        r.setScore(matchingScore);
         r.setData(v.getData());
 
         Gson gson = new GsonBuilder().create();
@@ -64,27 +64,36 @@ public class VerificationServlet extends HttpServlet {
     }
 
 
-    private int matchPersons(Person elmoP, Person vreqP) {
+    private void matchPersons(VerificationReply r, Person elmoP, Person vreqP) {
         int match = 0;
+        int score = 0;
         // TODO: Until we have expanded ELMO with gender...
         if (!"-".equals(elmoP.getGender()) && !elmoP.getGender().equals(vreqP.getGender())) {
-            return 100;
+        	r.addMessage("Added 100 to score: Gender does not match.");
+            match += 100;
         }
 
         Date ebd = elmoP.getBirthDate();
         Date vbd = vreqP.getBirthDate();
         if (ebd == null || vbd == null) {
-            return 100;
+        	r.addMessage("Added 100 to score: Birth date not set for " + (ebd == null ? "elmo" : "local") + " person.");
+        	match += 100;
+        } else if (!ebd.equals(vbd)) {
+        	r.addMessage("Added 100 to score: Birth date does not match.");
+        	match += 100;
         }
+        
+        logger.info(elmoP.getFamilyName() + " - " + vreqP.getFamilyName());
+        logger.info(elmoP.getGivenNames() + " - " + vreqP.getGivenNames());
 
-        if (!ebd.equals(vbd)) {
-            return 100;
-        }
+        score += Util.levenshteinDistance(elmoP.getFamilyName(), vreqP.getFamilyName());
+        score += Util.levenshteinDistance(elmoP.getGivenNames(), vreqP.getGivenNames());
+        
+        r.addMessage("Added " + score + " to score based on Levenshtein check on name.");
+        
+        match += score;
 
-        match += Util.levenshteinDistance(elmoP.getFamilyName(), vreqP.getFamilyName());
-        match += Util.levenshteinDistance(elmoP.getGivenNames(), vreqP.getGivenNames());
-
-        return match;
+        r.setScore(match);
     }
 
 
@@ -102,14 +111,17 @@ public class VerificationServlet extends HttpServlet {
             throw new IllegalArgumentException("Failed to parse XML", e);
         }
 
-        Node elmo = doc.getDocumentElement();
-        Node report = elmo.getFirstChild();
+        NodeList list = doc.getElementsByTagName("report");
+        if(list.getLength() == 0) {
+        	throw new IllegalArgumentException("Failed to get report from XML.");
+        }
+        Node report = list.item(0);
 
         Person p = new Person();
         p.setBirthDate(getDate(getValueForTag(report, "learner/bday"), getValueForTag(report, "learner/bday/@dtf")));
         p.setFamilyName(getValueForTag(report, "learner/familyName"));
         p.setGivenNames(getValueForTag(report, "learner/givenNames"));
-        p.setGivenNames("-"); // TODO: We need to expand ELMO to include Gender
+        p.setGender("-"); // TODO: We need to expand ELMO to include Gender
 
         return p;
     }
