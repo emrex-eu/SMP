@@ -29,7 +29,7 @@ public class NCPListServlet extends HttpServlet {
             if (conn.getResponseCode() == HttpURLConnection.HTTP_OK) {
                 json = Util.getDataFromConnection(conn);
                 response.setContentType("text/html");
-                response.getWriter().println(json);
+                response.getWriter().write(json);
             }
         } catch (IOException t) {
             logger.error("Failed to get NCP list.", t);

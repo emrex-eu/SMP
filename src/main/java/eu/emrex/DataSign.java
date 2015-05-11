@@ -111,15 +111,6 @@ public class DataSign extends HttpServlet {
         // Extract the private key from string
         encKey = encKey.replaceAll("(-----.*?-----)", "");
         byte[] encoded = Base64Coder.decodeLines(encKey);
-        logger.info("Extracted key, length " + encoded.length);
-
-        /*
-        RSAPrivateKeyStructure asn1PrivKey = new RSAPrivateKeyStructure(
-                                                                        (ASN1Sequence) ASN1Sequence
-                                                                            .fromByteArray(encoded));
-        RSAPrivateKeySpec rsaPrivKeySpec = new RSAPrivateKeySpec(asn1PrivKey.getModulus(),
-                                                                 asn1PrivKey.getPrivateExponent());
-                                                                 */
         PKCS8EncodedKeySpec rsaPrivKeySpec = new PKCS8EncodedKeySpec(encoded);
         KeyFactory kf = KeyFactory.getInstance("RSA");
         RSAPrivateKey pk = (RSAPrivateKey) kf.generatePrivate(rsaPrivKeySpec);
@@ -182,7 +173,7 @@ public class DataSign extends HttpServlet {
             logger.error("signature validation status: " + sv);
             if (sv == false) {
                 // Check the validation status of each Reference.
-                Iterator i = signature.getSignedInfo().getReferences().iterator();
+                Iterator<?> i = signature.getSignedInfo().getReferences().iterator();
                 for (int j = 0; i.hasNext(); j++) {
                     boolean refValid = ((Reference) i.next()).validate(valContext);
                     System.out.println("ref[" + j + "] validity status: " + refValid);

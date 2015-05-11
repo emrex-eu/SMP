@@ -13,6 +13,7 @@
 		<gson.version>2.3.1</gson.version>
 		<slf4j.version>1.7.10</slf4j.version>
 		<bouncycastle.version>1.46</bouncycastle.version>
+		<commons.version>2.4</commons.version>
 	</properties>
 
 	<dependencies>
@@ -44,6 +45,13 @@
 			<groupId>org.eclipse.jetty</groupId>
 			<artifactId>jetty-server</artifactId>
 			<version>${jetty.version}</version>
+		</dependency>
+
+
+		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+			<version>${commons.version}</version>
 		</dependency>
 
 		<!-- Not needed for now, as long as we can use PKCS#8 keys
