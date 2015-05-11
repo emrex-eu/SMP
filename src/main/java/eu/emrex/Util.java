@@ -1,9 +1,9 @@
 package eu.emrex;
 
 import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.ProtocolException;
@@ -12,6 +12,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 
 import javax.servlet.http.HttpServletRequest;
+
+import org.apache.commons.io.IOUtils;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -31,14 +33,10 @@ public class Util {
 
 
     public static String getDataFromConnection(HttpURLConnection conn) throws IOException {
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
         InputStream is = conn.getInputStream();
-        byte[] buf = new byte[1024];
-
-        while (is.read(buf) != -1) {
-            bos.write(buf);
-        }
-        return bos.toString();
+        StringWriter writer = new StringWriter();
+        IOUtils.copy(is, writer, "UTF-8");
+        return writer.toString();
     }
 
 
