@@ -14,6 +14,7 @@
 		<slf4j.version>1.7.10</slf4j.version>
 		<bouncycastle.version>1.46</bouncycastle.version>
 		<commons.version>2.4</commons.version>
+		<itext.version>5.4.2</itext.version>
 	</properties>
 
 	<dependencies>
@@ -52,6 +53,12 @@
 			<groupId>commons-io</groupId>
 			<artifactId>commons-io</artifactId>
 			<version>${commons.version}</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>com.itextpdf</groupId>
+			<artifactId>itextpdf</artifactId>
+			<version>${itext.version}</version>
 		</dependency>
 
 		<!-- Not needed for now, as long as we can use PKCS#8 keys
