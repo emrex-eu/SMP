@@ -28,7 +28,7 @@ public class NCPListServlet extends HttpServlet {
             response.setStatus(conn.getResponseCode());
             if (conn.getResponseCode() == HttpURLConnection.HTTP_OK) {
                 json = Util.getDataFromConnection(conn);
-                response.setContentType("text/html");
+                response.setContentType("application/json");
                 response.getWriter().write(json);
             }
         } catch (IOException t) {
