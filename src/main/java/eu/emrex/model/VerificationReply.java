@@ -9,13 +9,15 @@ public class VerificationReply {
 
     private int score;
 
-    private String data;
+    private boolean verified;
 
     private final List<String> messages;
-    
+
+
     public VerificationReply() {
-    	messages = new ArrayList<String>();
+        messages = new ArrayList<String>();
     }
+
 
     public String getSessionId() {
         return SessionId;
@@ -37,21 +39,23 @@ public class VerificationReply {
     }
 
 
-    public String getData() {
-        return data;
+    public boolean isVerified() {
+        return verified;
     }
 
 
-    public void setData(String data) {
-        this.data = data;
+    public void setVerified(boolean verified) {
+        this.verified = verified;
     }
 
-	public List<String> getMessages() {
-		return messages;
-	}
-    
+
+    public List<String> getMessages() {
+        return messages;
+    }
+
+
     public void addMessage(String msg) {
-    	messages.add(msg);
+        messages.add(msg);
     }
 
 }
