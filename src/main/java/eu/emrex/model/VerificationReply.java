@@ -6,7 +6,7 @@ public class VerificationReply {
 
     private int score;
 
-    private String data;
+    private boolean verified;
 
 
     public String getSessionId() {
@@ -29,13 +29,13 @@ public class VerificationReply {
     }
 
 
-    public String getData() {
-        return data;
+    public boolean isVerified() {
+        return verified;
     }
 
 
-    public void setData(String data) {
-        this.data = data;
+    public void setVerified(boolean verified) {
+        this.verified = verified;
     }
 
 }
