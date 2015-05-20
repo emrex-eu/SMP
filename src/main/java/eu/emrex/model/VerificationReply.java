@@ -5,7 +5,7 @@ import java.util.List;
 
 public class VerificationReply {
 
-    private String SessionId;
+    private String sessionId;
 
     private int score;
 
@@ -20,12 +20,12 @@ public class VerificationReply {
 
 
     public String getSessionId() {
-        return SessionId;
+        return sessionId;
     }
 
 
     public void setSessionId(String sessionId) {
-        SessionId = sessionId;
+        this.sessionId = sessionId;
     }
 
 
