@@ -2,15 +2,25 @@ package eu.emrex;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.security.GeneralSecurityException;
+import java.security.PublicKey;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Iterator;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.xml.crypto.dsig.Reference;
+import javax.xml.crypto.dsig.XMLSignature;
+import javax.xml.crypto.dsig.XMLSignatureFactory;
+import javax.xml.crypto.dsig.dom.DOMValidateContext;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.xpath.XPath;
@@ -55,8 +65,14 @@ public class VerificationServlet extends HttpServlet {
         VerificationReply r = new VerificationReply();
         matchPersons(r, elmoP, vreqP);
         r.setSessionId(v.getSessionId());
-        r.setData(v.getData());
 
+        try {
+            r.setVerified(verifySignature(v.getPubKey(), v.getData()));
+            logger.info("verifySignature(): " + verifySignature(v.getPubKey(), v.getData()));
+        } catch (Exception e) {
+            logger.info("Exception trying to verify signature: " + e.getStackTrace());
+            r.setVerified(false);
+        }
         Gson gson = new GsonBuilder().create();
         response.setStatus(HttpServletResponse.SC_OK);
         response.setContentType("application/json");
@@ -69,28 +85,28 @@ public class VerificationServlet extends HttpServlet {
         int score = 0;
         // TODO: Until we have expanded ELMO with gender...
         if (!"-".equals(elmoP.getGender()) && !elmoP.getGender().equals(vreqP.getGender())) {
-        	r.addMessage("Added 100 to score: Gender does not match.");
+            r.addMessage("Added 100 to score: Gender does not match.");
             match += 100;
         }
 
         Date ebd = elmoP.getBirthDate();
         Date vbd = vreqP.getBirthDate();
         if (ebd == null || vbd == null) {
-        	r.addMessage("Added 100 to score: Birth date not set for " + (ebd == null ? "elmo" : "local") + " person.");
-        	match += 100;
+            r.addMessage("Added 100 to score: Birth date not set for " + (ebd == null ? "elmo" : "local") + " person.");
+            match += 100;
         } else if (!ebd.equals(vbd)) {
-        	r.addMessage("Added 100 to score: Birth date does not match.");
-        	match += 100;
+            r.addMessage("Added 100 to score: Birth date does not match.");
+            match += 100;
         }
-        
+
         logger.info(elmoP.getFamilyName() + " - " + vreqP.getFamilyName());
         logger.info(elmoP.getGivenNames() + " - " + vreqP.getGivenNames());
 
         score += Util.levenshteinDistance(elmoP.getFamilyName(), vreqP.getFamilyName());
         score += Util.levenshteinDistance(elmoP.getGivenNames(), vreqP.getGivenNames());
-        
+
         r.addMessage("Added " + score + " to score based on Levenshtein check on name.");
-        
+
         match += score;
 
         r.setScore(match);
@@ -112,8 +128,8 @@ public class VerificationServlet extends HttpServlet {
         }
 
         NodeList list = doc.getElementsByTagName("report");
-        if(list.getLength() == 0) {
-        	throw new IllegalArgumentException("Failed to get report from XML.");
+        if (list.getLength() == 0) {
+            throw new IllegalArgumentException("Failed to get report from XML.");
         }
         Node report = list.item(0);
 
@@ -156,5 +172,59 @@ public class VerificationServlet extends HttpServlet {
             logger.info("XPATH error", e);
             return null;
         }
+    }
+
+
+    private static X509Certificate getCertificate(String certString) throws IOException, GeneralSecurityException {
+        InputStream is = new ByteArrayInputStream(certString.getBytes());
+        CertificateFactory cf = CertificateFactory.getInstance("X.509");
+        X509Certificate cert = (X509Certificate) cf.generateCertificate(is);
+        is.close();
+        return cert;
+    }
+
+
+    public boolean verifySignature(String certificate, String data) throws Exception {
+        // Create a DOM XMLSignatureFactory that will be used to generate the enveloped signature.
+        XMLSignatureFactory fac = XMLSignatureFactory.getInstance("DOM");
+
+        // Instantiate the document to be signed.
+        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+        dbf.setNamespaceAware(true);
+        InputStream is = new ByteArrayInputStream(data.getBytes()); // StandardCharsets.ISO_8859_1
+        Document doc = dbf.newDocumentBuilder().parse(is);
+
+        // Find Signature element.
+        NodeList nl = doc.getElementsByTagNameNS(XMLSignature.XMLNS, "Signature");
+        if (nl.getLength() == 0) {
+            throw new Exception("Cannot find Signature element");
+        }
+
+        X509Certificate cert = getCertificate(certificate);
+        PublicKey pubKey = cert.getPublicKey();
+        DOMValidateContext valContext = new DOMValidateContext(pubKey, nl.item(0));
+
+        // Unmarshal the XMLSignature.
+        XMLSignature signature = fac.unmarshalXMLSignature(valContext);
+
+        // Validate the XMLSignature.
+        boolean coreValidity = signature.validate(valContext);
+
+        // Check core validation status.
+        if (coreValidity == false) {
+            logger.error("Signature failed core validation");
+            boolean sv = signature.getSignatureValue().validate(valContext);
+            logger.error("signature validation status: " + sv);
+            if (sv == false) {
+                // Check the validation status of each Reference.
+                Iterator<?> i = signature.getSignedInfo().getReferences().iterator();
+                for (int j = 0; i.hasNext(); j++) {
+                    boolean refValid = ((Reference) i.next()).validate(valContext);
+                    System.out.println("ref[" + j + "] validity status: " + refValid);
+                }
+            }
+        }
+
+        return coreValidity;
     }
 }

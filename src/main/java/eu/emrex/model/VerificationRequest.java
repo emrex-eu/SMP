@@ -12,6 +12,8 @@ public class VerificationRequest {
 
     private String gender;
 
+    private String pubKey;
+
     private String data;
 
 
@@ -72,6 +74,16 @@ public class VerificationRequest {
 
     public void setData(String data) {
         this.data = data;
+    }
+
+
+    public String getPubKey() {
+        return pubKey;
+    }
+
+
+    public void setPubKey(String pubKey) {
+        this.pubKey = pubKey;
     }
 
 }

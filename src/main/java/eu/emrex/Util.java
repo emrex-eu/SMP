@@ -14,11 +14,16 @@ import java.nio.file.Paths;
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.io.IOUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 public class Util {
+
+    private static final Logger logger = LoggerFactory.getLogger(Util.class);
+
 
     public static HttpURLConnection setupConnection(String wsurl, String method) throws MalformedURLException,
             IOException,
@@ -56,6 +61,7 @@ public class Util {
 
         String inputReq = jb.toString();
 
+        logger.info("request: " + inputReq);
         Gson gson = new GsonBuilder().create();
         return gson.fromJson(inputReq, t);
     }
