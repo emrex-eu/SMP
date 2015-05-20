@@ -12,10 +12,12 @@ public class VerificationReply {
     private boolean verified;
 
     private final List<String> messages;
-    
+
+
     public VerificationReply() {
-    	messages = new ArrayList<String>();
+        messages = new ArrayList<String>();
     }
+
 
     public String getSessionId() {
         return SessionId;
@@ -46,12 +48,14 @@ public class VerificationReply {
         this.verified = verified;
     }
 
-	public List<String> getMessages() {
-		return messages;
-	}
-    
+
+    public List<String> getMessages() {
+        return messages;
+    }
+
+
     public void addMessage(String msg) {
-    	messages.add(msg);
+        messages.add(msg);
     }
 
 }
