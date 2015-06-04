@@ -89,8 +89,8 @@ public class VerificationServlet extends HttpServlet {
             match += 100;
         }
 
-        Date ebd = elmoP.getBirthDate();
-        Date vbd = vreqP.getBirthDate();
+        String ebd = elmoP.getBirthDate();
+        String vbd = vreqP.getBirthDate();
         if (ebd == null || vbd == null) {
             r.addMessage("Added 100 to score: Birth date not set for " + (ebd == null ? "elmo" : "local") + " person.");
             match += 100;
@@ -105,7 +105,9 @@ public class VerificationServlet extends HttpServlet {
         score += Util.levenshteinDistance(elmoP.getFamilyName(), vreqP.getFamilyName());
         score += Util.levenshteinDistance(elmoP.getGivenNames(), vreqP.getGivenNames());
 
-        r.addMessage("Added " + score + " to score based on Levenshtein check on name.");
+        if (score > 0) {
+            r.addMessage("Added " + score + " to score based on Levenshtein check on name.");
+        }
 
         match += score;
 
@@ -134,7 +136,7 @@ public class VerificationServlet extends HttpServlet {
         Node report = list.item(0);
 
         Person p = new Person();
-        p.setBirthDate(getDate(getValueForTag(report, "learner/bday"), getValueForTag(report, "learner/bday/@dtf")));
+        p.setBirthDate(getValueForTag(report, "learner/bday"));
         p.setFamilyName(getValueForTag(report, "learner/familyName"));
         p.setGivenNames(getValueForTag(report, "learner/givenNames"));
         p.setGender("-"); // TODO: We need to expand ELMO to include Gender
@@ -145,7 +147,7 @@ public class VerificationServlet extends HttpServlet {
 
     private Person getPersonFromVerificationRequest(VerificationRequest v) {
         Person p = new Person();
-        p.setBirthDate(getDate(v.getBirthDate(), "yyyyMMdd"));
+        p.setBirthDate(v.getBirthDate());
         p.setFamilyName(v.getFamilyName());
         p.setGender(v.getGender());
         p.setGivenNames(v.getGivenNames());
