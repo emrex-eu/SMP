@@ -3,6 +3,7 @@ package eu.emrex;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.PublicKey;
 import java.security.cert.CertificateFactory;
@@ -11,6 +12,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.List;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -26,8 +28,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathFactory;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.jboss.logging.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -52,13 +53,16 @@ public class VerificationServlet extends HttpServlet {
 
     private static final long serialVersionUID = 1L;
 
-    private final Logger logger = LoggerFactory.getLogger(VerificationServlet.class);
+    private final Logger logger = Logger.getLogger(VerificationServlet.class);
 
+
+    // private final Logger logger = LoggerFactory.getLogger(VerificationServlet.class);
 
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException,
             IOException {
 
         VerificationRequest v = Util.getJsonObjectFromRequest(request, VerificationRequest.class);
+        v.setData(v.getData().replaceAll("\r\n", "\n").replaceAll("\r", "\n"));
         Person elmoP = getPersonFromElmo(v.getData());
         Person vreqP = getPersonFromVerificationRequest(v);
 
@@ -66,11 +70,18 @@ public class VerificationServlet extends HttpServlet {
         matchPersons(r, elmoP, vreqP);
         r.setSessionId(v.getSessionId());
 
+        System.out.println("SMP logger test");
         try {
-            r.setVerified(verifySignature(v.getPubKey(), v.getData()));
-            logger.info("verifySignature(): " + verifySignature(v.getPubKey(), v.getData()));
+            boolean verified = verifySignature(r.getMessages(), v.getPubKey(), v.getData());
+            r.setVerified(verified);
+            logger.info("verifySignature(): " + verified);
+
+            // r.addMessage("XML data length: " + v.getData().length());
+            if (verified == false) {
+            }
         } catch (Exception e) {
             logger.info("Exception trying to verify signature: " + e.getStackTrace());
+            r.addMessage(e.getStackTrace().toString());
             r.setVerified(false);
         }
         Gson gson = new GsonBuilder().create();
@@ -186,14 +197,15 @@ public class VerificationServlet extends HttpServlet {
     }
 
 
-    public boolean verifySignature(String certificate, String data) throws Exception {
+    public boolean verifySignature(List<String> msgs, String certificate, String data) throws Exception {
         // Create a DOM XMLSignatureFactory that will be used to generate the enveloped signature.
         XMLSignatureFactory fac = XMLSignatureFactory.getInstance("DOM");
 
         // Instantiate the document to be signed.
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
         dbf.setNamespaceAware(true);
-        InputStream is = new ByteArrayInputStream(data.getBytes()); // StandardCharsets.ISO_8859_1
+        InputStream is = new ByteArrayInputStream(data.getBytes(StandardCharsets.ISO_8859_1)); // StandardCharsets.ISO_8859_1
+        // msgs.add("Data bytes length: " + data.getBytes(StandardCharsets.ISO_8859_1).length);
         Document doc = dbf.newDocumentBuilder().parse(is);
 
         // Find Signature element.
@@ -217,14 +229,18 @@ public class VerificationServlet extends HttpServlet {
             logger.error("Signature failed core validation");
             boolean sv = signature.getSignatureValue().validate(valContext);
             logger.error("signature validation status: " + sv);
+            msgs.add("Signature core verification failed, status: " + sv);
             if (sv == false) {
                 // Check the validation status of each Reference.
                 Iterator<?> i = signature.getSignedInfo().getReferences().iterator();
                 for (int j = 0; i.hasNext(); j++) {
                     boolean refValid = ((Reference) i.next()).validate(valContext);
                     System.out.println("ref[" + j + "] validity status: " + refValid);
+                    msgs.add("ref[" + j + "] validity status: " + refValid);
                 }
             }
+        } else {
+            // msgs.add("Signature verification passed");
         }
 
         return coreValidity;
