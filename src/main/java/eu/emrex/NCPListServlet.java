@@ -20,7 +20,8 @@ public class NCPListServlet extends HttpServlet {
     private final Logger logger = LoggerFactory.getLogger(NCPListServlet.class);
 
 
-    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
         HttpURLConnection conn = null;
         String json = null;
         try {
