@@ -28,7 +28,8 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathFactory;
 
-import org.jboss.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -53,7 +54,7 @@ public class VerificationServlet extends HttpServlet {
 
     private static final long serialVersionUID = 1L;
 
-    private final Logger logger = Logger.getLogger(VerificationServlet.class);
+    private static final Logger logger = LoggerFactory.getLogger(VerificationServlet.class);
 
 
     // private final Logger logger = LoggerFactory.getLogger(VerificationServlet.class);
@@ -62,6 +63,7 @@ public class VerificationServlet extends HttpServlet {
             IOException {
 
         VerificationRequest v = Util.getJsonObjectFromRequest(request, VerificationRequest.class);
+        logger.info("SMP REQUEST: " + "\n" + v.getData() + "\nEND REQUEST \n");
         v.setData(v.getData().replaceAll("\r\n", "\n").replaceAll("\r", "\n"));
         Person elmoP = getPersonFromElmo(v.getData());
         Person vreqP = getPersonFromVerificationRequest(v);
@@ -70,9 +72,8 @@ public class VerificationServlet extends HttpServlet {
         matchPersons(r, elmoP, vreqP);
         r.setSessionId(v.getSessionId());
 
-        System.out.println("SMP logger test");
         try {
-            boolean verified = verifySignature(r.getMessages(), v.getPubKey(), v.getData());
+            boolean verified = verifySignature(r.getMessages(), v.getPubKey(), v.getData64());
             r.setVerified(verified);
             logger.info("verifySignature(): " + verified);
 
@@ -134,7 +135,7 @@ public class VerificationServlet extends HttpServlet {
         Document doc = null;
         try {
             docBuilder = docFactory.newDocumentBuilder();
-            doc = docBuilder.parse(new ByteArrayInputStream(xml.getBytes()));
+            doc = docBuilder.parse(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
         } catch (Exception e) {
             logger.error("Failed to parse XML", e);
             throw new IllegalArgumentException("Failed to parse XML", e);
@@ -197,15 +198,14 @@ public class VerificationServlet extends HttpServlet {
     }
 
 
-    public boolean verifySignature(List<String> msgs, String certificate, String data) throws Exception {
+    public boolean verifySignature(List<String> msgs, String certificate, String datagz64) throws Exception {
         // Create a DOM XMLSignatureFactory that will be used to generate the enveloped signature.
         XMLSignatureFactory fac = XMLSignatureFactory.getInstance("DOM");
 
         // Instantiate the document to be signed.
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
         dbf.setNamespaceAware(true);
-        InputStream is = new ByteArrayInputStream(data.getBytes(StandardCharsets.ISO_8859_1)); // StandardCharsets.ISO_8859_1
-        // msgs.add("Data bytes length: " + data.getBytes(StandardCharsets.ISO_8859_1).length);
+        InputStream is = new ByteArrayInputStream(GzipUtil.gzipDecompressBytes(Base64Coder.decode(datagz64))); // data.getBytes(StandardCharsets.UTF_8));
         Document doc = dbf.newDocumentBuilder().parse(is);
 
         // Find Signature element.

@@ -16,6 +16,8 @@ public class VerificationRequest {
 
     private String data;
 
+    private String data64;
+
 
     public String getSessionId() {
         return SessionId;
@@ -74,6 +76,16 @@ public class VerificationRequest {
 
     public void setData(String data) {
         this.data = data;
+    }
+
+
+    public String getData64() {
+        return data64;
+    }
+
+
+    public void setData64(String data64) {
+        this.data64 = data64;
     }
 
 

@@ -8,4 +8,5 @@ release.properties
 .project
 .settings/
 run.sh
+src/main/resources/rebel.xml
 *~
