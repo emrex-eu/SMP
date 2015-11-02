@@ -96,10 +96,12 @@ public class VerificationServlet extends HttpServlet {
         int match = 0;
         int score = 0;
         // TODO: Until we have expanded ELMO with gender...
+        /* Remove gender check
         if (!"-".equals(elmoP.getGender()) && !elmoP.getGender().equals(vreqP.getGender())) {
             r.addMessage("Added 100 to score: Gender does not match.");
             match += 100;
         }
+        */
 
         String ebd = elmoP.getBirthDate();
         String vbd = vreqP.getBirthDate();
@@ -151,7 +153,6 @@ public class VerificationServlet extends HttpServlet {
         p.setBirthDate(getValueForTag(report, "learner/bday"));
         p.setFamilyName(getValueForTag(report, "learner/familyName"));
         p.setGivenNames(getValueForTag(report, "learner/givenNames"));
-        p.setGender("-"); // TODO: We need to expand ELMO to include Gender
 
         return p;
     }
@@ -161,7 +162,6 @@ public class VerificationServlet extends HttpServlet {
         Person p = new Person();
         p.setBirthDate(v.getBirthDate());
         p.setFamilyName(v.getFamilyName());
-        p.setGender(v.getGender());
         p.setGivenNames(v.getGivenNames());
 
         return p;
