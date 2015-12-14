@@ -10,6 +10,7 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -31,6 +32,7 @@ import javax.xml.xpath.XPathFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
@@ -71,6 +73,8 @@ public class VerificationServlet extends HttpServlet {
         VerificationReply r = new VerificationReply();
         matchPersons(r, elmoP, vreqP);
         r.setSessionId(v.getSessionId());
+
+        analyzeDataFromElmo(r, v.getData());
 
         try {
             boolean verified = verifySignature(r.getMessages(), v.getPubKey(), v.getData64());
@@ -126,6 +130,80 @@ public class VerificationServlet extends HttpServlet {
         match += score;
 
         r.setScore(match);
+    }
+
+
+    private void analyzeDataFromElmo(VerificationReply r, String xml) {
+        DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
+        docFactory.setNamespaceAware(false);
+        DocumentBuilder docBuilder = null;
+        Document doc = null;
+        try {
+            docBuilder = docFactory.newDocumentBuilder();
+            doc = docBuilder.parse(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
+        } catch (Exception e) {
+            logger.error("Failed to parse XML", e);
+            throw new IllegalArgumentException("Failed to parse XML", e);
+        }
+
+        logger.info("analyzeDataFromElmo()");
+        List<String> issuers = new ArrayList<String>();
+        List<Double> ects = new ArrayList<Double>();
+        List<Integer> courses = new ArrayList<Integer>();
+
+        NodeList reportList = doc.getElementsByTagName("report");
+        if (reportList != null && reportList.getLength() > 0) {
+            for (int rep = 0; rep < reportList.getLength(); rep++) {
+                Node report = reportList.item(rep);
+
+                Double ectsTotal = 0.0;
+                Integer coursesTotal = 0;
+
+                NodeList opportulist = ((Element) report).getElementsByTagName("learningOpportunitySpecification");
+                if (opportulist != null && opportulist.getLength() > 0) {
+                    for (int i = 0; i < opportulist.getLength(); i++) {
+                        Node opportunity = opportulist.item(i);
+
+                        String type = Util.getValueForXmlTag(opportunity, "type");
+                        if ("module".equalsIgnoreCase(type) || "course".equalsIgnoreCase(type)) {
+                            coursesTotal++;
+
+                            String val = Util.getValueForXmlTag(opportunity,
+                                "specifies/learningOpportunityInstance/credit/value");
+                            if (val != null && !val.equals("")) {
+                                Double e1 = new Double(val.replaceAll(",", "."));
+                                if (e1 != null && e1 > 0) {
+                                    ectsTotal += e1;
+                                }
+                            }
+
+                        }
+                    }
+                }
+
+                String instId = Util.getValueForXmlTag(report, "issuer/identifier[@type='schac']");
+
+                if (instId == null || instId.equals("")) {
+                    instId = Util.getValueForXmlTag(report, "issuer/url");
+                    instId = instId.replaceAll("https?://", "");
+                    instId = instId.replaceAll("/.*", "");
+                }
+
+                if (instId != null && !instId.equals("")) {
+                    issuers.add(instId);
+                    ects.add(ectsTotal);
+                    courses.add(coursesTotal);
+                }
+
+            }
+        }
+
+        r.setInstitutions(issuers);
+        r.setEctsImported(ects);
+        r.setCoursesImported(courses);
+
+        logger.info("ECTS imported: " + r.getEctsImported() + ", courses imported: " + r.getCoursesImported());
+
     }
 
 

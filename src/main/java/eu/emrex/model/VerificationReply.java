@@ -11,6 +11,12 @@ public class VerificationReply {
 
     private boolean verified;
 
+    private List<Integer> coursesImported;
+
+    private List<Double> ectsImported;
+
+    private List<String> institutions;
+
     private final List<String> messages;
 
 
@@ -58,4 +64,33 @@ public class VerificationReply {
         messages.add(msg);
     }
 
+
+    public List<String> getInstitutions() {
+        return institutions;
+    }
+
+
+    public void setInstitutions(List<String> institutions) {
+        this.institutions = institutions;
+    }
+
+
+    public List<Integer> getCoursesImported() {
+        return coursesImported;
+    }
+
+
+    public void setCoursesImported(List<Integer> coursesImported) {
+        this.coursesImported = coursesImported;
+    }
+
+
+    public List<Double> getEctsImported() {
+        return ectsImported;
+    }
+
+
+    public void setEctsImported(List<Double> ectsImported) {
+        this.ectsImported = ectsImported;
+    }
 }
