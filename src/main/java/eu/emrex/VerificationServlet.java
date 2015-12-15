@@ -221,16 +221,16 @@ public class VerificationServlet extends HttpServlet {
             throw new IllegalArgumentException("Failed to parse XML", e);
         }
 
-        NodeList list = doc.getElementsByTagName("report");
+        NodeList list = doc.getElementsByTagName("learner");
         if (list.getLength() == 0) {
-            throw new IllegalArgumentException("Failed to get report from XML.");
+            throw new IllegalArgumentException("Failed to get learner from XML.");
         }
-        Node report = list.item(0);
+        Node learner = list.item(0);
 
         Person p = new Person();
-        p.setBirthDate(getValueForTag(report, "learner/bday"));
-        p.setFamilyName(getValueForTag(report, "learner/familyName"));
-        p.setGivenNames(getValueForTag(report, "learner/givenNames"));
+        p.setBirthDate(getValueForTag(learner, "bday"));
+        p.setFamilyName(getValueForTag(learner, "familyName"));
+        p.setGivenNames(getValueForTag(learner, "givenNames"));
 
         return p;
     }
