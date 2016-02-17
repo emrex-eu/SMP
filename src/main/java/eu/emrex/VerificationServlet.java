@@ -29,6 +29,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathFactory;
 
+import org.apache.commons.codec.binary.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -58,8 +59,19 @@ public class VerificationServlet extends HttpServlet {
 
     private static final Logger logger = LoggerFactory.getLogger(VerificationServlet.class);
 
-
     // private final Logger logger = LoggerFactory.getLogger(VerificationServlet.class);
+
+    /* Local logging, where log4j doesn't seem to be working
+     * 
+    private void logFile(String str) {
+        try {
+            Files.write(Paths.get("c:/temp/log.txt"), str.getBytes(), StandardOpenOption.APPEND);
+        } catch (IOException e) {
+            // exception handling left as an exercise for the reader
+        }
+    }
+    */
+
 
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException,
             IOException {
@@ -76,6 +88,8 @@ public class VerificationServlet extends HttpServlet {
 
         analyzeDataFromElmo(r, v.getData());
 
+        // logFile("Certificate: " + v.getPubKey() + "\n(length: " + v.getPubKey().length() + ")\n");
+
         try {
             boolean verified = verifySignature(r.getMessages(), v.getPubKey(), v.getData64());
             r.setVerified(verified);
@@ -85,8 +99,8 @@ public class VerificationServlet extends HttpServlet {
             if (verified == false) {
             }
         } catch (Exception e) {
-            logger.info("Exception trying to verify signature: " + e.getStackTrace());
-            r.addMessage(e.getStackTrace().toString());
+            logger.info("Exception trying to verify signature: " + e.getMessage());
+            r.addMessage("Exception trying to verify signature: " + e.getMessage().toString());
             r.setVerified(false);
         }
         Gson gson = new GsonBuilder().create();
@@ -283,7 +297,7 @@ public class VerificationServlet extends HttpServlet {
         // Instantiate the document to be signed.
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
         dbf.setNamespaceAware(true);
-        InputStream is = new ByteArrayInputStream(GzipUtil.gzipDecompressBytes(Base64Coder.decode(datagz64))); // data.getBytes(StandardCharsets.UTF_8));
+        InputStream is = new ByteArrayInputStream(GzipUtil.gzipDecompressBytes(Base64.decodeBase64(datagz64))); // data.getBytes(StandardCharsets.UTF_8));
         Document doc = dbf.newDocumentBuilder().parse(is);
 
         // Find Signature element.

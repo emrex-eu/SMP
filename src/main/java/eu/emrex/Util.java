@@ -62,8 +62,10 @@ public class Util {
         String inputReq = jb.toString();
 
         // logger.info("request: " + inputReq);
+
         Gson gson = new GsonBuilder().create();
         return gson.fromJson(inputReq, t);
+        // return gson.fromJson(new InputStreamReader(request.getInputStream(), "UTF-8"), t);
     }
 
 

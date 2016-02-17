@@ -68,6 +68,12 @@
 			<version>${itext.version}</version>
 		</dependency>
 
+		<dependency>
+			<groupId>commons-codec</groupId>
+			<artifactId>commons-codec</artifactId>
+			<version>1.6</version>
+		</dependency>
+
 		<!-- Not needed for now, as long as we can use PKCS#8 keys
 		<dependency>
 			<groupId>org.bouncycastle</groupId>

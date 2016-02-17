@@ -23,7 +23,8 @@ package eu.emrex;
  * This class is used to encode and decode data in Base64 format as described in RFC 1521.
  * 
  * <p>
- * Project home page: <a href="http://www.source-code.biz/base64coder/java/">www.source-code.biz/base64coder/java</a><br>
+ * Project home page: <a href="http://www.source-code.biz/base64coder/java/">www.source-code.biz/base64coder/java</a>
+ * <br>
  * Author: Christian d'Heureuse, Inventec Informatik AG, Zurich, Switzerland<br>
  * Multi-licensed: EPL / LGPL / GPL / AL / BSD / MIT.
  */
@@ -34,6 +35,8 @@ public class Base64Coder {
 
     // Mapping table from 6-bit nibbles to Base64 characters.
     private static final char[] map1 = new char[64];
+
+
     static {
         int i = 0;
         for (char c = 'A'; c <= 'Z'; c++)
@@ -48,6 +51,8 @@ public class Base64Coder {
 
     // Mapping table from Base64 characters to 6-bit nibbles.
     private static final byte[] map2 = new byte[128];
+
+
     static {
         for (int i = 0; i < map2.length; i++)
             map2[i] = -1;
