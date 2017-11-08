@@ -4,6 +4,9 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.security.GeneralSecurityException;
 import java.security.PublicKey;
 import java.security.cert.CertificateFactory;
@@ -30,6 +33,7 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathFactory;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.codec.binary.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -61,8 +65,9 @@ public class VerificationServlet extends HttpServlet {
 
     // private final Logger logger = LoggerFactory.getLogger(VerificationServlet.class);
 
+
     /* Local logging, where log4j doesn't seem to be working
-     * 
+     */
     private void logFile(String str) {
         try {
             Files.write(Paths.get("c:/temp/log.txt"), str.getBytes(), StandardOpenOption.APPEND);
@@ -70,40 +75,51 @@ public class VerificationServlet extends HttpServlet {
             // exception handling left as an exercise for the reader
         }
     }
-    */
+    /**/
 
 
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException,
-            IOException {
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 
-        VerificationRequest v = Util.getJsonObjectFromRequest(request, VerificationRequest.class);
-        logger.info("SMP REQUEST: " + "\n" + v.getData() + "\nEND REQUEST \n");
-        v.setData(v.getData().replaceAll("\r\n", "\n").replaceAll("\r", "\n"));
-        Person elmoP = getPersonFromElmo(v.getData());
-        Person vreqP = getPersonFromVerificationRequest(v);
+        Gson gson = new GsonBuilder().create();
+        response.setContentType("application/json");
 
         VerificationReply r = new VerificationReply();
+        r.setVerified(false);
+
+        VerificationRequest v = null;
+        String xml = null;
+        try {
+            v = Util.getJsonObjectFromRequest(request, VerificationRequest.class);
+            xml = StringUtils.newStringUtf8(GzipUtil.gzipDecompressBytes(Base64.decodeBase64(v.getData64())));
+        } catch (IOException e) {
+            r.addMessage(e.getMessage());
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            response.getWriter().println(gson.toJson(r));
+            return;
+        }
+
+        logger.info("SMP REQUEST, xml: " + "\n" + xml + "\nEND REQUEST \n");
+        xml = xml.replaceAll("\r\n", "\n").replaceAll("\r", "\n");
+        Person elmoP = getPersonFromElmo(xml);
+        Person vreqP = getPersonFromVerificationRequest(v);
+
         matchPersons(r, elmoP, vreqP);
         r.setSessionId(v.getSessionId());
+        r.setElmoFamilyName(elmoP.getFamilyName());
+        r.setElmoGivenNames(elmoP.getGivenNames());
 
-        analyzeDataFromElmo(r, v.getData());
-
-        // logFile("Certificate: " + v.getPubKey() + "\n(length: " + v.getPubKey().length() + ")\n");
+        analyzeDataFromElmo(r, xml);
 
         try {
             boolean verified = verifySignature(r.getMessages(), v.getPubKey(), v.getData64());
             r.setVerified(verified);
             logger.info("verifySignature(): " + verified);
 
-            // r.addMessage("XML data length: " + v.getData().length());
-            if (verified == false) {
-            }
         } catch (Exception e) {
             logger.info("Exception trying to verify signature: " + e.getMessage());
             r.addMessage("Exception trying to verify signature: " + e.getMessage().toString());
-            r.setVerified(false);
         }
-        Gson gson = new GsonBuilder().create();
+
         response.setStatus(HttpServletResponse.SC_OK);
         response.setContentType("application/json");
         response.getWriter().println(gson.toJson(r));
@@ -123,10 +139,14 @@ public class VerificationServlet extends HttpServlet {
 
         String ebd = elmoP.getBirthDate();
         String vbd = vreqP.getBirthDate();
-        if (ebd == null || vbd == null) {
+        if (ebd == null || vbd == null)
+
+        {
             r.addMessage("Added 100 to score: Birth date not set for " + (ebd == null ? "elmo" : "local") + " person.");
             match += 100;
-        } else if (!ebd.equals(vbd)) {
+        } else if (!ebd.equals(vbd))
+
+        {
             r.addMessage("Added 100 to score: Birth date does not match.");
             match += 100;
         }
@@ -137,13 +157,16 @@ public class VerificationServlet extends HttpServlet {
         score += Util.levenshteinDistance(elmoP.getFamilyName(), vreqP.getFamilyName());
         score += Util.levenshteinDistance(elmoP.getGivenNames(), vreqP.getGivenNames());
 
-        if (score > 0) {
+        if (score > 0)
+
+        {
             r.addMessage("Added " + score + " to score based on Levenshtein check on name.");
         }
 
         match += score;
 
         r.setScore(match);
+
     }
 
 
@@ -223,11 +246,13 @@ public class VerificationServlet extends HttpServlet {
 
     private Person getPersonFromElmo(String xml) {
         xml = xml.replaceAll("[\\n\\r]", "");
-        DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
-        docFactory.setNamespaceAware(false);
+        logFile("XML: " + xml);
+
         DocumentBuilder docBuilder = null;
         Document doc = null;
         try {
+            DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
+            docFactory.setNamespaceAware(false);
             docBuilder = docFactory.newDocumentBuilder();
             doc = docBuilder.parse(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
         } catch (Exception e) {

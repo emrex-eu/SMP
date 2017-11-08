@@ -7,6 +7,10 @@ public class VerificationReply {
 
     private String sessionId;
 
+    private String elmoGivenNames;
+
+    private String elmoFamilyName;
+
     private int score;
 
     private boolean verified;
@@ -93,4 +97,12 @@ public class VerificationReply {
     public void setEctsImported(List<Double> ectsImported) {
         this.ectsImported = ectsImported;
     }
+
+    public String getElmoGivenNames() { return elmoGivenNames; }
+
+    public void setElmoGivenNames(String elmoGivenNames) { this.elmoGivenNames = elmoGivenNames; }
+
+    public String getElmoFamilyName() { return elmoFamilyName; }
+
+    public void setElmoFamilyName(String elmoFamilyName) { this.elmoFamilyName = elmoFamilyName; }
 }

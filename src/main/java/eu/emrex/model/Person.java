@@ -9,9 +9,6 @@ public class Person {
 
     private String birthDate;
 
-    private String gender;
-
-
     public String getGivenNames() {
         return givenNames;
     }
@@ -40,15 +37,4 @@ public class Person {
     public void setBirthDate(String birthDate) {
         this.birthDate = birthDate;
     }
-
-
-    public String getGender() {
-        return gender;
-    }
-
-
-    public void setGender(String gender) {
-        this.gender = gender;
-    }
-
 }

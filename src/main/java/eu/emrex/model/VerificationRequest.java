@@ -2,7 +2,7 @@ package eu.emrex.model;
 
 public class VerificationRequest {
 
-    private String SessionId;
+    private String sessionId;
 
     private String givenNames;
 
@@ -10,22 +10,18 @@ public class VerificationRequest {
 
     private String birthDate;
 
-    private String gender;
-
     private String pubKey;
-
-    private String data;
 
     private String data64;
 
 
     public String getSessionId() {
-        return SessionId;
+        return sessionId;
     }
 
 
     public void setSessionId(String sessionId) {
-        SessionId = sessionId;
+        this.sessionId = sessionId;
     }
 
 
@@ -56,26 +52,6 @@ public class VerificationRequest {
 
     public void setBirthDate(String birthDate) {
         this.birthDate = birthDate;
-    }
-
-
-    public String getGender() {
-        return gender;
-    }
-
-
-    public void setGender(String gender) {
-        this.gender = gender;
-    }
-
-
-    public String getData() {
-        return data;
-    }
-
-
-    public void setData(String data) {
-        this.data = data;
     }
 
 
