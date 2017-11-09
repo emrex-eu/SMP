@@ -43,6 +43,7 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import org.apache.commons.codec.binary.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -110,7 +111,7 @@ public class DataSign extends HttpServlet {
 
         // Extract the private key from string
         encKey = encKey.replaceAll("(-----.*?-----)", "");
-        byte[] encoded = Base64Coder.decodeLines(encKey);
+        byte[] encoded = Base64.decodeBase64(encKey);
         PKCS8EncodedKeySpec rsaPrivKeySpec = new PKCS8EncodedKeySpec(encoded);
         KeyFactory kf = KeyFactory.getInstance("RSA");
         RSAPrivateKey pk = (RSAPrivateKey) kf.generatePrivate(rsaPrivKeySpec);

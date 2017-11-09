@@ -4,12 +4,16 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.security.GeneralSecurityException;
 import java.security.PublicKey;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -28,9 +32,12 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathFactory;
 
+import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.codec.binary.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
@@ -56,36 +63,63 @@ public class VerificationServlet extends HttpServlet {
 
     private static final Logger logger = LoggerFactory.getLogger(VerificationServlet.class);
 
-
     // private final Logger logger = LoggerFactory.getLogger(VerificationServlet.class);
 
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException,
-            IOException {
 
-        VerificationRequest v = Util.getJsonObjectFromRequest(request, VerificationRequest.class);
-        logger.info("SMP REQUEST: " + "\n" + v.getData() + "\nEND REQUEST \n");
-        v.setData(v.getData().replaceAll("\r\n", "\n").replaceAll("\r", "\n"));
-        Person elmoP = getPersonFromElmo(v.getData());
-        Person vreqP = getPersonFromVerificationRequest(v);
+    /* Local logging, where log4j doesn't seem to be working
+     */
+    private void logFile(String str) {
+        try {
+            Files.write(Paths.get("c:/temp/log.txt"), str.getBytes(), StandardOpenOption.APPEND);
+        } catch (IOException e) {
+            // exception handling left as an exercise for the reader
+        }
+    }
+    /**/
+
+
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+
+        Gson gson = new GsonBuilder().create();
+        response.setContentType("application/json");
 
         VerificationReply r = new VerificationReply();
+        r.setVerified(false);
+
+        VerificationRequest v = null;
+        String xml = null;
+        try {
+            v = Util.getJsonObjectFromRequest(request, VerificationRequest.class);
+            xml = StringUtils.newStringUtf8(GzipUtil.gzipDecompressBytes(Base64.decodeBase64(v.getData64())));
+        } catch (IOException e) {
+            r.addMessage(e.getMessage());
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            response.getWriter().println(gson.toJson(r));
+            return;
+        }
+
+        logger.info("SMP REQUEST, xml: " + "\n" + xml + "\nEND REQUEST \n");
+        xml = xml.replaceAll("\r\n", "\n").replaceAll("\r", "\n");
+        Person elmoP = getPersonFromElmo(xml);
+        Person vreqP = getPersonFromVerificationRequest(v);
+
         matchPersons(r, elmoP, vreqP);
         r.setSessionId(v.getSessionId());
+        r.setElmoFamilyName(elmoP.getFamilyName());
+        r.setElmoGivenNames(elmoP.getGivenNames());
+
+        analyzeDataFromElmo(r, xml);
 
         try {
             boolean verified = verifySignature(r.getMessages(), v.getPubKey(), v.getData64());
             r.setVerified(verified);
             logger.info("verifySignature(): " + verified);
 
-            // r.addMessage("XML data length: " + v.getData().length());
-            if (verified == false) {
-            }
         } catch (Exception e) {
-            logger.info("Exception trying to verify signature: " + e.getStackTrace());
-            r.addMessage(e.getStackTrace().toString());
-            r.setVerified(false);
+            logger.info("Exception trying to verify signature: " + e.getMessage());
+            r.addMessage("Exception trying to verify signature: " + e.getMessage().toString());
         }
-        Gson gson = new GsonBuilder().create();
+
         response.setStatus(HttpServletResponse.SC_OK);
         response.setContentType("application/json");
         response.getWriter().println(gson.toJson(r));
@@ -105,10 +139,14 @@ public class VerificationServlet extends HttpServlet {
 
         String ebd = elmoP.getBirthDate();
         String vbd = vreqP.getBirthDate();
-        if (ebd == null || vbd == null) {
+        if (ebd == null || vbd == null)
+
+        {
             r.addMessage("Added 100 to score: Birth date not set for " + (ebd == null ? "elmo" : "local") + " person.");
             match += 100;
-        } else if (!ebd.equals(vbd)) {
+        } else if (!ebd.equals(vbd))
+
+        {
             r.addMessage("Added 100 to score: Birth date does not match.");
             match += 100;
         }
@@ -119,18 +157,20 @@ public class VerificationServlet extends HttpServlet {
         score += Util.levenshteinDistance(elmoP.getFamilyName(), vreqP.getFamilyName());
         score += Util.levenshteinDistance(elmoP.getGivenNames(), vreqP.getGivenNames());
 
-        if (score > 0) {
+        if (score > 0)
+
+        {
             r.addMessage("Added " + score + " to score based on Levenshtein check on name.");
         }
 
         match += score;
 
         r.setScore(match);
+
     }
 
 
-    private Person getPersonFromElmo(String xml) {
-        xml = xml.replaceAll("[\\n\\r]", "");
+    private void analyzeDataFromElmo(VerificationReply r, String xml) {
         DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
         docFactory.setNamespaceAware(false);
         DocumentBuilder docBuilder = null;
@@ -143,16 +183,93 @@ public class VerificationServlet extends HttpServlet {
             throw new IllegalArgumentException("Failed to parse XML", e);
         }
 
-        NodeList list = doc.getElementsByTagName("report");
-        if (list.getLength() == 0) {
-            throw new IllegalArgumentException("Failed to get report from XML.");
+        logger.info("analyzeDataFromElmo()");
+        List<String> issuers = new ArrayList<String>();
+        List<Double> ects = new ArrayList<Double>();
+        List<Integer> courses = new ArrayList<Integer>();
+
+        NodeList reportList = doc.getElementsByTagName("report");
+        if (reportList != null && reportList.getLength() > 0) {
+            for (int rep = 0; rep < reportList.getLength(); rep++) {
+                Node report = reportList.item(rep);
+
+                Double ectsTotal = 0.0;
+                Integer coursesTotal = 0;
+
+                NodeList opportulist = ((Element) report).getElementsByTagName("learningOpportunitySpecification");
+                if (opportulist != null && opportulist.getLength() > 0) {
+                    for (int i = 0; i < opportulist.getLength(); i++) {
+                        Node opportunity = opportulist.item(i);
+
+                        String type = Util.getValueForXmlTag(opportunity, "type");
+                        if ("module".equalsIgnoreCase(type) || "course".equalsIgnoreCase(type)) {
+                            coursesTotal++;
+
+                            String val = Util.getValueForXmlTag(opportunity,
+                                "specifies/learningOpportunityInstance/credit/value");
+                            if (val != null && !val.equals("")) {
+                                Double e1 = new Double(val.replaceAll(",", "."));
+                                if (e1 != null && e1 > 0) {
+                                    ectsTotal += e1;
+                                }
+                            }
+
+                        }
+                    }
+                }
+
+                String instId = Util.getValueForXmlTag(report, "issuer/identifier[@type='schac']");
+
+                if (instId == null || instId.equals("")) {
+                    instId = Util.getValueForXmlTag(report, "issuer/url");
+                    instId = instId.replaceAll("https?://", "");
+                    instId = instId.replaceAll("/.*", "");
+                }
+
+                if (instId != null && !instId.equals("")) {
+                    issuers.add(instId);
+                    ects.add(ectsTotal);
+                    courses.add(coursesTotal);
+                }
+
+            }
         }
-        Node report = list.item(0);
+
+        r.setInstitutions(issuers);
+        r.setEctsImported(ects);
+        r.setCoursesImported(courses);
+
+        logger.info("ECTS imported: " + r.getEctsImported() + ", courses imported: " + r.getCoursesImported());
+
+    }
+
+
+    private Person getPersonFromElmo(String xml) {
+        xml = xml.replaceAll("[\\n\\r]", "");
+        logFile("XML: " + xml);
+
+        DocumentBuilder docBuilder = null;
+        Document doc = null;
+        try {
+            DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
+            docFactory.setNamespaceAware(false);
+            docBuilder = docFactory.newDocumentBuilder();
+            doc = docBuilder.parse(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
+        } catch (Exception e) {
+            logger.error("Failed to parse XML", e);
+            throw new IllegalArgumentException("Failed to parse XML", e);
+        }
+
+        NodeList list = doc.getElementsByTagName("learner");
+        if (list.getLength() == 0) {
+            throw new IllegalArgumentException("Failed to get learner from XML.");
+        }
+        Node learner = list.item(0);
 
         Person p = new Person();
-        p.setBirthDate(getValueForTag(report, "learner/bday"));
-        p.setFamilyName(getValueForTag(report, "learner/familyName"));
-        p.setGivenNames(getValueForTag(report, "learner/givenNames"));
+        p.setBirthDate(getValueForTag(learner, "bday"));
+        p.setFamilyName(getValueForTag(learner, "familyName"));
+        p.setGivenNames(getValueForTag(learner, "givenNames"));
 
         return p;
     }
@@ -205,7 +322,7 @@ public class VerificationServlet extends HttpServlet {
         // Instantiate the document to be signed.
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
         dbf.setNamespaceAware(true);
-        InputStream is = new ByteArrayInputStream(GzipUtil.gzipDecompressBytes(Base64Coder.decode(datagz64))); // data.getBytes(StandardCharsets.UTF_8));
+        InputStream is = new ByteArrayInputStream(GzipUtil.gzipDecompressBytes(Base64.decodeBase64(datagz64))); // data.getBytes(StandardCharsets.UTF_8));
         Document doc = dbf.newDocumentBuilder().parse(is);
 
         // Find Signature element.

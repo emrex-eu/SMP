@@ -12,8 +12,11 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathFactory;
 
 import org.apache.commons.io.IOUtils;
+import org.w3c.dom.Node;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -59,8 +62,10 @@ public class Util {
         String inputReq = jb.toString();
 
         // logger.info("request: " + inputReq);
+
         Gson gson = new GsonBuilder().create();
         return gson.fromJson(inputReq, t);
+        // return gson.fromJson(new InputStreamReader(request.getInputStream(), "UTF-8"), t);
     }
 
 
@@ -102,6 +107,16 @@ public class Util {
         }
 
         return v1[t.length()];
+    }
+
+
+    public static String getValueForXmlTag(Node node, String exp) {
+        XPath xpath = XPathFactory.newInstance().newXPath();
+        try {
+            return xpath.evaluate(exp, node);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
 }
