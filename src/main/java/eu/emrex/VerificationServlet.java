@@ -78,7 +78,8 @@ public class VerificationServlet extends HttpServlet {
     /**/
 
 
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
 
         Gson gson = new GsonBuilder().create();
         response.setContentType("application/json");
@@ -100,7 +101,7 @@ public class VerificationServlet extends HttpServlet {
 
         logger.info("SMP REQUEST, xml: " + "\n" + xml + "\nEND REQUEST \n");
         xml = xml.replaceAll("\r\n", "\n").replaceAll("\r", "\n");
-        Person elmoP = getPersonFromElmo(xml);
+        Person elmoP = getPersonFromElmo(r, xml);
         Person vreqP = getPersonFromVerificationRequest(v);
 
         matchPersons(r, elmoP, vreqP);
@@ -244,9 +245,11 @@ public class VerificationServlet extends HttpServlet {
     }
 
 
-    private Person getPersonFromElmo(String xml) {
+    private Person getPersonFromElmo(VerificationReply r, String xml) {
         xml = xml.replaceAll("[\\n\\r]", "");
         logFile("XML: " + xml);
+
+        Person p = new Person();
 
         DocumentBuilder docBuilder = null;
         Document doc = null;
@@ -256,20 +259,21 @@ public class VerificationServlet extends HttpServlet {
             docBuilder = docFactory.newDocumentBuilder();
             doc = docBuilder.parse(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
         } catch (Exception e) {
+            r.addMessage("Invalid XML: Failed to parse XML.");
             logger.error("Failed to parse XML", e);
-            throw new IllegalArgumentException("Failed to parse XML", e);
         }
 
         NodeList list = doc.getElementsByTagName("learner");
-        if (list.getLength() == 0) {
-            throw new IllegalArgumentException("Failed to get learner from XML.");
-        }
-        Node learner = list.item(0);
+        if (list.getLength() > 0) {
+            Node learner = list.item(0);
+            p.setBirthDate(getValueForTag(learner, "bday"));
+            p.setFamilyName(getValueForTag(learner, "familyName"));
+            p.setGivenNames(getValueForTag(learner, "givenNames"));
 
-        Person p = new Person();
-        p.setBirthDate(getValueForTag(learner, "bday"));
-        p.setFamilyName(getValueForTag(learner, "familyName"));
-        p.setGivenNames(getValueForTag(learner, "givenNames"));
+        } else {
+            logger.error("Invalid XML: Failed to get learner from XML.");
+            r.addMessage("Invalid XML: Failed to get learner from XML.");
+        }
 
         return p;
     }
