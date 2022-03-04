@@ -13,7 +13,7 @@
 		<gson.version>2.3.1</gson.version>
 		<slf4j.version>1.7.10</slf4j.version>
 		<bouncycastle.version>1.46</bouncycastle.version>
-		<commons.version>2.4</commons.version>
+		<commons.version>2.7</commons.version>
 		<itext.version>5.4.2</itext.version>
 	</properties>
 
